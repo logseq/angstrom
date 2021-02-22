@@ -493,9 +493,9 @@ let rec list ps =
   | p::ps -> lift2 cons p (list ps)
 
 let count n p =
-  if n < 0 
+  if n < 0
   then fail "count: n < 0"
-  else 
+  else
     let rec loop = function
       | 0 -> return []
       | n -> lift2 cons p (loop (n - 1))
@@ -545,6 +545,25 @@ let scan_ state f ~with_buffer =
 
 let scan state f =
   scan_ state f ~with_buffer:Bigstringaf.substring
+
+let scan1_ state f ~with_buffer =
+  { run=
+      (fun input pos more fail succ ->
+         let state = ref state in
+         let parser =
+           count_while1
+             ~f:(fun c ->
+                 match f !state c with
+                 | None -> false
+                 | Some state' ->
+                   state := state' ;
+                   true )
+             ~with_buffer
+           >>| fun x -> (x, !state)
+         in
+         parser.run input pos more fail succ ) }
+
+let scan1 state f = scan1_ state f ~with_buffer:Bigstringaf.substring
 
 let scan_state state f =
   scan_ state f ~with_buffer:(fun _ ~off:_ ~len:_ -> ())
